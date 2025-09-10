@@ -194,13 +194,15 @@ def main():
         for ev in events:
             cal.add_component(ev)
 
+        # write output next to source JSON/JSONC with same basename and .ics extension
+        base = os.path.splitext(os.path.basename(args.json_input))[0]
+        out_path = os.path.join(os.path.dirname(args.json_input), f"{base}.ics")
         try:
-            # icalendar.to_ical() 返回 bytes，所以必须以二进制模式 'wb' 写入
-            with open(args.output, "wb") as f:
+            with open(out_path, "wb") as f:
                 f.write(cal.to_ical())
-            print(f"\n成功！日历文件已保存为: {args.output}")
+            print(f"\n成功！日历文件已保存为: {out_path}")
         except IOError as e:
-            print(f"错误: 无法写入文件 '{args.output}': {e}", file=sys.stderr)
+            print(f"错误: 无法写入文件 '{out_path}': {e}", file=sys.stderr)
             sys.exit(1)
 
     elif args.mode == "debug":
