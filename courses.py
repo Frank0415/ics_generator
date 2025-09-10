@@ -1,14 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-import argparse
 import sys
-import os
 from datetime import datetime, timedelta
-from icalendar import Calendar, Event, vRecur
-from weekmarks import load_jsonc_or_json, process_weekmarks_data
-from courses import process_course_data
-from debug import debug_file
+from icalendar import Event
+from icalendar.prop import vRecur
+
 
 # --- JSON 格式定义与验证 ---
 
@@ -32,9 +26,6 @@ def validate_json(data, required_keys):
     if not isinstance(data.get("weekday"), list):
         print("错误: 'weekday' 字段必须是一个列表。", file=sys.stderr)
         sys.exit(1)
-
-
-# --- 核心逻辑 ---
 
 
 def parse_weekday_string(s):
@@ -69,8 +60,9 @@ def parse_weekday_string(s):
         sys.exit(1)
 
 
-def create_schedule_events(data):
+def process_course_data(data):
     """根据课表JSON数据创建一组 icalendar.Event 对象"""
+    print("调用函数: process_course_data")
     validate_json(data, SCHEDULE_REQUIRED_KEYS)
 
     events = []
@@ -133,79 +125,3 @@ def create_schedule_events(data):
         events.append(event)
 
     return events
-
-
-# --- 主程序入口 ---
-def main():
-    parser = argparse.ArgumentParser(
-        description="一个根据课表JSON生成ICS日历文件的命令行工具 (使用 icalendar 库)。",
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-    subparsers = parser.add_subparsers(
-        dest="mode", required=True, help="选择程序运行模式"
-    )
-
-    # --- Generate 命令 ---
-    parser_gen = subparsers.add_parser("generate", help="从JSON文件生成ICS日历")
-    parser_gen.add_argument("json_input", help="输入的课表 .json 文件路径")
-    parser_gen.add_argument(
-        "-o",
-        "--output",
-        default="schedule.ics",
-        help="输出的ICS文件名 (默认为: schedule.ics)",
-    )
-
-    # --- Debug 命令 ---
-    parser_debug = subparsers.add_parser(
-        "debug", help="解析并显示JSON/JSONC或ICS文件的内容"
-    )
-    parser_debug.add_argument(
-        "file_to_debug", help="需要调试的 .json/.jsonc 或 .ics 文件路径"
-    )
-
-    args = parser.parse_args()
-
-    if args.mode == "generate":
-        try:
-            json_data = load_jsonc_or_json(args.json_input)
-        except (FileNotFoundError, OSError) as e:
-            print(
-                f"错误: 无法读取或解析JSON文件 '{args.json_input}': {e}",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-
-        cal = Calendar()
-        # 添加一些标准的日历属性
-        cal.add("prodid", "-//My Course Schedule Generator//example.com//")
-        cal.add("version", "2.0")
-
-        # Determine which processor to use based on data content
-        if "course_name" in json_data:
-            events = process_course_data(json_data)
-        elif "start_date" in json_data:
-            events = process_weekmarks_data(json_data)
-        else:
-            print(
-                f"错误: 无法识别JSON数据类型 in '{args.json_input}'。", file=sys.stderr
-            )
-            sys.exit(1)
-
-        for ev in events:
-            cal.add_component(ev)
-
-        try:
-            # icalendar.to_ical() 返回 bytes，所以必须以二进制模式 'wb' 写入
-            with open(args.output, "wb") as f:
-                f.write(cal.to_ical())
-            print(f"\n成功！日历文件已保存为: {args.output}")
-        except IOError as e:
-            print(f"错误: 无法写入文件 '{args.output}': {e}", file=sys.stderr)
-            sys.exit(1)
-
-    elif args.mode == "debug":
-        debug_file(args.file_to_debug)
-
-
-if __name__ == "__main__":
-    main()

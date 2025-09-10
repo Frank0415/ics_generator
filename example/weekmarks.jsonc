@@ -1,0 +1,8 @@
+{
+  "start_date": "2025-09-10",
+  "start_number": 0,
+  "name": "Week {}",
+  // is to be replaced with the week number
+  "total_weeks": 15
+  // Total generate 15 weeks
+}
